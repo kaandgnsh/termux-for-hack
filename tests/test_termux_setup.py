@@ -28,7 +28,7 @@ class ProfileTests(unittest.TestCase):
         packages = setup.PROFILE_PACKAGES["all"]
         self.assertEqual(len(packages), len(set(packages)))
         for name in ("basic", "developer", "security"):
-            self.assertTrue(setup.PROFILE_PACKAGES[name] <= set(packages))
+            self.assertTrue(set(setup.PROFILE_PACKAGES[name]) <= set(packages))
 
     def test_termux_detection(self):
         self.assertTrue(
