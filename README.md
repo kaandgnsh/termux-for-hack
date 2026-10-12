@@ -1,78 +1,153 @@
 # Termux Setup Helper
 
 <p align="center">
-  <strong>A legacy helper for preparing a Termux environment for command-line development and security learning.</strong>
+  <strong>A small, interactive package setup CLI for Termux on Android.</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Termux-1F8F4A?style=for-the-badge&logo=android&logoColor=white" alt="Termux">
   <img src="https://img.shields.io/badge/Language-Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/Status-Legacy%20Project-8A5A00?style=for-the-badge" alt="Legacy project">
+  <a href="https://github.com/kaandgnsh/termux-for-hack/actions/workflows/tests.yml">
+    <img src="https://github.com/kaandgnsh/termux-for-hack/actions/workflows/tests.yml/badge.svg?branch=main" alt="GitHub Actions">
+  </a>
 </p>
 
 ---
 
 ## Overview
 
-**Termux Setup Helper** is an older, single-file Python script intended to install a collection of command-line packages in Termux. It was created as a quick setup shortcut, rather than as a configurable package manager.
+**Termux Setup Helper** simplifies installation of a curated set of command-line packages in [Termux](https://termux.dev/). It provides a few practical profiles, previews the planned actions by default, and requires explicit confirmation before running package-manager commands.
 
-> [!WARNING]
-> **Do not run the current script blindly on a primary device.** It performs broad package updates and installations, uses outdated package names, contains a malformed shell command, and does not reliably launch its optional companion installer. The companion `all-pip-installer` script also tries to install Python standard-library modules as third-party packages. Review the source and install only the packages you actually need.
+It is a package setup helper, not an exploit framework or an automatic installer for every Python library.
 
-This README documents the repository as it exists today; it does not claim the legacy installer is fully functional or compatible with current Termux releases.
+## Features
 
-## Intended Features
-
-- Automate a basic Termux package setup.
-- Offer an optional follow-up step for Python packages.
-- Keep the implementation as a small, inspectable Python script.
-- Serve as a learning example of shell-command automation from Python.
+- **Dry run by default:** preview the selected package list without changing the device.
+- **Explicit opt-in:** pass `--install` and confirm before installing anything.
+- **Curated profiles:** choose basic, developer, security-lab, or all listed packages.
+- **Optional system updates:** `--upgrade` adds `pkg update` and `pkg upgrade` to the plan.
+- **No third-party Python dependencies:** the script uses Python's standard library.
+- **Failure handling:** stops if a package-manager command fails.
+- **Termux check:** actual installation is refused outside a Termux environment.
 
 ## Requirements
 
 - Android with [Termux](https://termux.dev/) installed.
-- Python available inside Termux.
+- Python 3 available inside Termux.
 - An internet connection for package downloads.
 
-Typical Termux setup commands include `pkg update` and `pkg install python git`. Run package operations manually so you can review what will change. Root access is not normally required for these basic Termux package operations.
+Install the minimal tools needed to download and inspect the repository:
 
-## Inspect the Source
+```bash
+pkg update
+pkg install git python
+```
 
-Clone this repository and review the script before considering any execution:
+These are manual commands; review them before running. Root access is not required for ordinary Termux package management.
+
+## Quick Start
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/kaandgnsh/termux-for-hack.git
 cd termux-for-hack
-sed -n '1,220p' termux_for_hack/m-termux.py
 ```
 
-**Execution is not recommended until the issues below have been fixed.** Do not follow the original instruction to accept every prompt automatically.
+List the available profiles:
 
-## Known Limitations
+```bash
+python termux_for_hack/m-termux.py --list
+```
 
-- **Outdated package list:** the script attempts to install packages such as Python 2 and separate `pip` commands that may no longer be appropriate.
-- **Malformed command:** `pkg;install openssh` is not a valid `pkg install openssh` command.
-- **Unreliable companion setup:** the script clones a separate repository and then runs `cd` in a different shell process, so the next command may execute from the wrong directory.
-- **Weak error handling:** command failures are not checked before the script reports success.
-- **Unmaintained dependency workflow:** the companion installer attempts to install standard-library modules (for example, `os`, `sys`, and `json`) and other questionable package names through `pip`.
-- **No automated tests:** compatibility with current Termux versions has not been verified.
+Preview the default profile. This makes no changes:
 
-## Recommended Improvements
+```bash
+python termux_for_hack/m-termux.py
+```
 
-- Replace shell strings with individually validated package operations.
-- Check and report each command's exit status.
-- Maintain a small, configurable list of supported Termux packages.
-- Remove obsolete package names and the unreliable companion-installation flow.
-- Add tests and verify behavior on a current Termux installation.
+Install the developer profile after reviewing the displayed plan:
+
+```bash
+python termux_for_hack/m-termux.py --profile developer --install
+```
+
+The script asks for confirmation. To also update the package index and upgrade existing packages, add `--upgrade`:
+
+```bash
+python termux_for_hack/m-termux.py --profile basic --upgrade --install
+```
+
+Only skip the final confirmation when you have reviewed the exact operations:
+
+```bash
+python termux_for_hack/m-termux.py --profile basic --install --yes
+```
+
+## Package Profiles
+
+| Profile | Packages |
+|:--|:--|
+| `basic` | `curl`, `git`, `python`, `wget` |
+| `developer` | `clang`, `cmake`, `git`, `make`, `pkg-config`, `python` |
+| `security` | `curl`, `git`, `nmap`, `openssh`, `openssl`, `perl`, `php`, `python`, `ruby`, `wget` |
+| `all` | The de-duplicated union of the listed profiles |
+
+The `security` profile provides general command-line tools useful in authorized labs; installing them does not grant permission to scan or access systems you do not own.
+
+## CLI Reference
+
+| Option | Description |
+|:--|:--|
+| `--profile NAME` | Select `basic`, `developer`, `security`, or `all`. Default: `basic`. |
+| `--list` | List profiles and package names. |
+| `--upgrade` | Preview or run `pkg update` and `pkg upgrade -y` before installation. |
+| `--install` | Proceed from preview to confirmed installation. |
+| `--yes` | Skip confirmation; valid only with `--install`. |
+| `-h, --help` | Display help. |
+
+The script invokes `pkg` with argument lists rather than shell command strings. It installs only the packages shown in the selected profile and does not attempt to install Python's standard-library modules through `pip`.
+
+## Troubleshooting
+
+**“Run this command from inside the Termux Android app.”**  
+Execute the script within Termux, not a desktop Linux terminal or a generic Python environment.
+
+**A package command fails.**  
+The script stops and reports the failing command's exit status. Check the package name, network connection, and Termux repository configuration, then retry the specific package operation manually if needed.
+
+## Tests
+
+Run the tests from the repository root:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+GitHub Actions runs the test suite on Python 3.10, 3.11, and 3.12. The tests mock package-manager execution and do not install packages on the CI runner.
+
+## Project Structure
+
+```text
+termux-for-hack/
+├── .github/
+│   └── workflows/
+│       └── tests.yml
+├── termux_for_hack/
+│   └── m-termux.py
+├── tests/
+│   └── test_termux_setup.py
+└── README.md
+```
 
 ## Responsible Use
 
-Use package setup scripts only on devices and environments you control. Inspect commands before execution, and avoid installing large collections of unrelated packages without a specific need.
+Install only packages you need, review system update plans, and use network tools only in environments you own or are authorized to assess.
 
 ## Author
 
 **Kaan DOĞAN** · [GitHub](https://github.com/kaandgnsh) · [LinkedIn](https://www.linkedin.com/in/kaan-do%C4%9Fan-911663280/) · [Instagram](https://instagram.com/kaandgn.sh)
 
 <p align="center">
-  <sub>Legacy project · Review before use</sub>
+  <sub>Preview first. Confirm explicitly. Keep your environment under control.</sub>
 </p>
